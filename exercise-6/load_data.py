@@ -25,5 +25,5 @@ def last_legering_diameter_data():
         legerings_navn.append(row[0].value)
         legeringer.append(row[1].value)
 
-    return {"diametere": diametere, "diameter_navn": diameter_navn, "legeringer": legeringer, "legerings_navn": legerings_navn}
+    return {"diameter_andel_sum": diametere, "diameter_navn": diameter_navn, "legerings_andel_sum": legeringer, "legerings_navn": legerings_navn}
 

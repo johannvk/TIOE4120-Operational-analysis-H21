@@ -1,4 +1,6 @@
+from typing import Dict
 import pandas as pd
+# from pyomo.core import expr
 import pyomo.environ as pyo
 
 # Lokale importer:
@@ -21,11 +23,56 @@ def test_pyomo():
     model.display()
 
 
-def main():
-    data = last_legering_diameter_data()
-    print(data)
+def bygg_basismodell(data: Dict[str, list]) -> pyo.Model:
+    modell = pyo.ConcreteModel("BasisModell")
+
+    diameter_summer = data["diameter_andel_sum"]; legerings_summer = data["legerings_andel_sum"]
+
+    modell.Diametere = range(len(diameter_summer))
+    modell.Legeringer = range(len(legerings_summer))
+
+    # Teller rader først: X_ij = Andel (diameter[i], legering[j])
+    modell.X = pyo.Var(modell.Diametere, modell.Legeringer, domain=pyo.NonNegativeReals)
+
+    # Legg til begrensning på diameter-summer:
+    # Må holde for hvert element i 'modell.Diametere' når vi summer over modell.Legeringer:
+    def diameter_betingelse(m: pyo.Model, diameter_i: int):
+        return sum(m.X[diameter_i, j] for j in m.Legeringer) == diameter_summer[diameter_i]
+    modell.diameterbegrensning = pyo.Constraint(modell.Diametere, rule=diameter_betingelse)
+
+    # Legg til begrensning på legerings-summer. 
+    # Må holde for hvert element i 'modell.Legeringer' når vi summer over modell.Diametere:
+    def legerings_betingelse(m: pyo.Model, legering_j: int):
+        return sum(m.X[i, legering_j] for i in m.Diametere) == legerings_summer[legering_j]
+    modell.legeringsbegrensing = pyo.Constraint(modell.Legeringer, rule=legerings_betingelse)
+
+    # Legg til triviellt objektiv: min 0
+    modell.null_objektiv = pyo.Objective(expr = 0.0)
+
+    return modell
+
+
+def løs_og_vis_frem_modell(m: pyo.Model):
+    opt = pyo.SolverFactory('glpk')
+    print("Beging solving:\n")
+    opt.solve(m) 
+    print("\nDone solving!")
+    m.display()
+    # return m
+
+
+def write_solution_to_excel(m: pyo.Model, sheet: str, filepath: str="Produkt_miks.xlsx"):
+    # TODO: Write out the solutions to the appropriate Excel files.
+
     pass
 
+
+def main():
+    data = last_legering_diameter_data()
+    basis_modell = bygg_basismodell(data)
+    løs_og_vis_frem_modell(basis_modell)
+    print(basis_modell.X.pprint())
+    print("Kake")
 
 if __name__ == "__main__":
     main()
