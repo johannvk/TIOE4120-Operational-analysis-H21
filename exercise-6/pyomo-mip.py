@@ -1,10 +1,10 @@
 from typing import Dict
-import pandas as pd
 # from pyomo.core import expr
 import pyomo.environ as pyo
+import numpy as np
 
 # Lokale importer:
-from load_data import last_legering_diameter_data
+from process_data import last_legering_diameter_data, skriv_løsning_til_fil
 
 def test_pyomo():
     model = pyo.ConcreteModel()
@@ -52,27 +52,36 @@ def bygg_basismodell(data: Dict[str, list]) -> pyo.Model:
     return modell
 
 
-def løs_og_vis_frem_modell(m: pyo.Model):
+def løs_modell(m: pyo.Model):
     opt = pyo.SolverFactory('glpk')
-    print("Beging solving:\n")
     opt.solve(m) 
+
+
+def løs_og_vis_frem_modell(m: pyo.Model):
+    print("Beging solving:\n")
+    løs_modell(m)
     print("\nDone solving!")
     m.display()
-    # return m
 
 
-def write_solution_to_excel(m: pyo.Model, sheet: str, filepath: str="Produkt_miks.xlsx"):
-    # TODO: Write out the solutions to the appropriate Excel files.
+def problem_1(skriv_til_fil=False, vis_modell=False):
+    data = last_legering_diameter_data()
+    basis_modell = bygg_basismodell(data)
 
-    pass
+    if vis_modell:
+        løs_og_vis_frem_modell(basis_modell)
+    else:
+        løs_modell(basis_modell)
+
+    X_matrix = np.array([[basis_modell.X[i, j].value for j in basis_modell.Legeringer] for i in basis_modell.Diametere], dtype=float)
+    print(f"Basismodell løsnings-matrise:\n{X_matrix}\n")
+
+    if skriv_til_fil:
+        skriv_løsning_til_fil(basis_modell, "Basismodell", "D5")
 
 
 def main():
-    data = last_legering_diameter_data()
-    basis_modell = bygg_basismodell(data)
-    løs_og_vis_frem_modell(basis_modell)
-    print(basis_modell.X.pprint())
-    print("Kake")
+    problem_1()
 
 if __name__ == "__main__":
     main()

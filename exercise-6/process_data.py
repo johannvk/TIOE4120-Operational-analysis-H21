@@ -1,6 +1,7 @@
 import openpyxl as xl
-import pandas as pd
+import pyomo.environ as pyo
 
+from openpyxl.utils import column_index_from_string, coordinate_to_tuple
 
 def last_legering_diameter_data():
     wb = xl.load_workbook("Produkt_miks.xlsx")
@@ -27,3 +28,17 @@ def last_legering_diameter_data():
 
     return {"diameter_andel_sum": diametere, "diameter_navn": diameter_navn, "legerings_andel_sum": legeringer, "legerings_navn": legerings_navn}
 
+
+def skriv_løsning_til_fil(m: pyo.Model, sheet_name: str, upper_left_corner_cell: str, filename="Produkt_miks.xlsx"):
+    rad, kolonne = coordinate_to_tuple(upper_left_corner_cell)
+
+    wb = xl.load_workbook("Produkt_miks.xlsx")
+    sheet = wb.get_sheet_by_name(sheet_name)
+
+    løsning = m.X
+    for i in m.Diametere:
+        for j in m.Legeringer:
+            sheet.cell(rad + i, kolonne + j, value = løsning[i, j].value)
+    wb.save(filename=filename)
+
+# skriv_løsning_til_fil(None, None, None)
