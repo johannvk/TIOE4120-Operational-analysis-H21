@@ -6,12 +6,7 @@ from openpyxl.utils import column_index_from_string, coordinate_to_tuple
 def last_legering_diameter_data():
     wb = xl.load_workbook("Produkt_miks.xlsx")
 
-    # sheet_names = wb.get_sheet_names()
-
     basis_sheet = wb.get_sheet_by_name("Legering-Diameter-Data")
-
-    # diameter_names = [cell[0].value for cell in basis_sheet["A2:A6"]]
-    # diameter_values = [cell[0].value for cell in basis_sheet["B2:B6"]]
 
     # Extract diameters and diameter percentages: 
     diameter_navn = []
@@ -40,5 +35,3 @@ def skriv_løsning_til_fil(m: pyo.Model, sheet_name: str, upper_left_corner_cell
         for j in m.Legeringer:
             sheet.cell(rad + i, kolonne + j, value = løsning[i, j].value)
     wb.save(filename=filename)
-
-# skriv_løsning_til_fil(None, None, None)

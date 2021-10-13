@@ -1,5 +1,4 @@
 from typing import Dict
-# from pyomo.core import expr
 import pyomo.environ as pyo
 import numpy as np
 
@@ -64,6 +63,10 @@ def løs_og_vis_frem_modell(m: pyo.Model):
     m.display()
 
 
+def løsningsvariabler_til_matrise(m: pyo.Model):
+    return np.array([[m.X[i, j].value for j in m.Legeringer] for i in m.Diametere], dtype=float)
+
+
 def problem_1(skriv_til_fil=False, vis_modell=False):
     data = last_legering_diameter_data()
     basis_modell = bygg_basismodell(data)
@@ -73,15 +76,43 @@ def problem_1(skriv_til_fil=False, vis_modell=False):
     else:
         løs_modell(basis_modell)
 
-    X_matrix = np.array([[basis_modell.X[i, j].value for j in basis_modell.Legeringer] for i in basis_modell.Diametere], dtype=float)
+    X_matrix = løsningsvariabler_til_matrise(basis_modell)
+
     print(f"Basismodell løsnings-matrise:\n{X_matrix}\n")
 
     if skriv_til_fil:
         skriv_løsning_til_fil(basis_modell, "Basismodell", "D5")
 
 
+def problem_2(skriv_til_fil=False):
+    data = last_legering_diameter_data()
+    ulovlig_produkt_modell = bygg_basismodell(data)
+
+    diameter_navn = data["diameter_navn"]; legerings_navn = data["legerings_navn"]
+    
+    ulovlige_legering_diameter_kombinasjoner = ((215, 600540), (215, 676079))
+
+    ulovlig_produkt_modell.null_andel_variabler = [(diameter_navn.index(diameter), legerings_navn.index(legering)) 
+                                                    for (diameter, legering) in ulovlige_legering_diameter_kombinasjoner]
+
+    def null_andel_ulovlig(m: pyo.Model, diameter_i, legering_j):
+        # diameter_i, legering_j = diameter_legering_tuple
+        return m.X[diameter_i, legering_j] == 0
+
+    ulovlig_produkt_modell.ulovlig_produkt_begrensning = pyo.Constraint(ulovlig_produkt_modell.null_andel_variabler, rule=null_andel_ulovlig)
+
+    løs_modell(ulovlig_produkt_modell)
+    print(f"\nLøsningsvariabler:\n{løsningsvariabler_til_matrise(ulovlig_produkt_modell)}\n")
+
+    if skriv_til_fil:
+        skriv_løsning_til_fil(ulovlig_produkt_modell, "Ulovlig produkt", "D5")
+
+
+
 def main():
-    problem_1()
+    # problem_1()
+    # problem_2()
+    pass
 
 if __name__ == "__main__":
     main()
