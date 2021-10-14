@@ -1,6 +1,7 @@
 from typing import Dict
 import pyomo.environ as pyo
 import numpy as np
+import itertools
 
 # Lokale importer:
 from process_data import last_legering_diameter_data, skriv_løsning_til_fil
@@ -29,6 +30,7 @@ def bygg_basismodell(data: Dict[str, list]) -> pyo.Model:
 
     modell.Diametere = range(len(diameter_summer))
     modell.Legeringer = range(len(legerings_summer))
+    
 
     # Teller rader først: X_ij = Andel (diameter[i], legering[j])
     modell.X = pyo.Var(modell.Diametere, modell.Legeringer, domain=pyo.NonNegativeReals)
@@ -47,7 +49,8 @@ def bygg_basismodell(data: Dict[str, list]) -> pyo.Model:
 
     # Legg til triviellt objektiv: min 0
     modell.null_objektiv = pyo.Objective(expr = 0.0)
-
+    
+    
     return modell
 
 
@@ -130,11 +133,57 @@ def problem_d(omega: float=0.05, inkluder_ulovlige_kombinasjoner=True):
     pass
 
 
+def problem_3(skriv_til_fil=False, print_resultat=True):
+    # Laste data og lage basismodell.
+    data = last_legering_diameter_data()
+    sigma_modell = bygg_basismodell(data)
+    
+    # Definere hjelpestørrelser m og M, pluss sigma.
+    liten_m = 0.01
+    stor_M = 2
+    sigma = 0.05
+    
+    # Definere hjelpevariabler y. 
+    sigma_modell.Y = pyo.Var(sigma_modell.Diametere, sigma_modell.Legeringer, domain=pyo.Binary)
+    
+    # Lager regler for å definere begrensninger.    
+    def regel_1(m: pyo.Model, diameter_i, legering_j):
+        return m.X[diameter_i, legering_j] >= liten_m*m.Y[diameter_i, legering_j]
+    
+    def regel_2(m: pyo.Model, diameter_i, legering_j):
+        return m.X[diameter_i, legering_j] >= sigma - stor_M*(1-m.Y[diameter_i, legering_j])
+    
+    def regel_3(m: pyo.Model, diameter_i, legering_j):
+        return m.X[diameter_i, legering_j] <= stor_M*m.Y[diameter_i, legering_j]
+    
+    
+    # Lage liste med alle indekser. 
+    sigma_modell.alle_indekser = [ item for item in itertools.product(sigma_modell.Diametere, sigma_modell.Legeringer) ]
+
+    # Legge til begrensninger. 
+    sigma_modell.begrensning_1 = pyo.Constraint(sigma_modell.alle_indekser, rule=regel_1)
+    sigma_modell.begrensning_2 = pyo.Constraint(sigma_modell.alle_indekser, rule=regel_2)
+    sigma_modell.begrensning_3 = pyo.Constraint(sigma_modell.alle_indekser, rule=regel_3)
+    
+    
+    # Løs problemet.
+    løs_modell(sigma_modell)
+
+        
+    if print_resultat:
+        print("Indeks     Y      X")
+        for i in sigma_modell.alle_indekser:
+            print(f"{i}:   {sigma_modell.Y[i].value}    {sigma_modell.X[i].value}")
+        
+        print(f"\nLøsningsvariabler:\n{løsningsvariabler_til_matrise(sigma_modell)}\n")
+        
 
 
 def main():
     # problem_1()
-    problem_2()
+    # problem_2()
+    problem_3()
+    
     pass
 
 if __name__ == "__main__":
