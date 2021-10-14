@@ -1,7 +1,7 @@
 import openpyxl as xl
 import pyomo.environ as pyo
 
-from openpyxl.utils import column_index_from_string, coordinate_to_tuple
+from openpyxl.utils import coordinate_to_tuple
 
 def last_legering_diameter_data():
     wb = xl.load_workbook("Produkt_miks.xlsx")

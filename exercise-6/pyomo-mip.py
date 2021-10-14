@@ -51,6 +51,25 @@ def bygg_basismodell(data: Dict[str, list]) -> pyo.Model:
     return modell
 
 
+def bygg_ulovlige_kombinasjoner_modell(data: Dict[str, list]) -> pyo.Model:
+    ulovlig_produkt_modell = bygg_basismodell(data)
+
+    diameter_navn = data["diameter_navn"]; legerings_navn = data["legerings_navn"]
+    
+    ulovlige_legering_diameter_kombinasjoner = ((215, 600540), (215, 676079))
+
+    ulovlig_produkt_modell.null_andel_variabler = [(diameter_navn.index(diameter), legerings_navn.index(legering)) 
+                                                    for (diameter, legering) in ulovlige_legering_diameter_kombinasjoner]
+
+    def null_andel_ulovlig(m: pyo.Model, diameter_i, legering_j):
+        # diameter_i, legering_j = diameter_legering_tuple
+        return m.X[diameter_i, legering_j] == 0
+
+    ulovlig_produkt_modell.ulovlig_produkt_begrensning = pyo.Constraint(ulovlig_produkt_modell.null_andel_variabler, rule=null_andel_ulovlig)
+
+    return ulovlig_produkt_modell
+
+
 def løs_modell(m: pyo.Model):
     opt = pyo.SolverFactory('glpk')
     opt.solve(m) 
@@ -86,20 +105,7 @@ def problem_1(skriv_til_fil=False, vis_modell=False):
 
 def problem_2(skriv_til_fil=False):
     data = last_legering_diameter_data()
-    ulovlig_produkt_modell = bygg_basismodell(data)
-
-    diameter_navn = data["diameter_navn"]; legerings_navn = data["legerings_navn"]
-    
-    ulovlige_legering_diameter_kombinasjoner = ((215, 600540), (215, 676079))
-
-    ulovlig_produkt_modell.null_andel_variabler = [(diameter_navn.index(diameter), legerings_navn.index(legering)) 
-                                                    for (diameter, legering) in ulovlige_legering_diameter_kombinasjoner]
-
-    def null_andel_ulovlig(m: pyo.Model, diameter_i, legering_j):
-        # diameter_i, legering_j = diameter_legering_tuple
-        return m.X[diameter_i, legering_j] == 0
-
-    ulovlig_produkt_modell.ulovlig_produkt_begrensning = pyo.Constraint(ulovlig_produkt_modell.null_andel_variabler, rule=null_andel_ulovlig)
+    ulovlig_produkt_modell = bygg_ulovlige_kombinasjoner_modell(data)
 
     løs_modell(ulovlig_produkt_modell)
     print(f"\nLøsningsvariabler:\n{løsningsvariabler_til_matrise(ulovlig_produkt_modell)}\n")
@@ -108,10 +114,27 @@ def problem_2(skriv_til_fil=False):
         skriv_løsning_til_fil(ulovlig_produkt_modell, "Ulovlig produkt", "D5")
 
 
+def problem_d(omega: float=0.05, inkluder_ulovlige_kombinasjoner=True):
+    data = last_legering_diameter_data()
+    # Usikker om vi skal inkludere at noen kombinasjoner ikke er loblige fortsatt. Tror det.
+    
+    if inkluder_ulovlige_kombinasjoner:
+        terskel_verdi_modell = bygg_ulovlige_kombinasjoner_modell(data)
+    else:
+        terskel_verdi_modell = bygg_basismodell(data)
+    
+    # Legge til binærvariabler samt betingelser for tvinge avgjørelsesvariabler X_ij 
+    # til å enten oppfylle "X_ij == 0" eller "X_ij >= omega". 
+    M = 1.0  # Stor nok til å ikke påvirke valg av X_ij.
+    
+    pass
+
+
+
 
 def main():
     # problem_1()
-    # problem_2()
+    problem_2()
     pass
 
 if __name__ == "__main__":
