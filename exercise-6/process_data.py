@@ -6,7 +6,7 @@ from openpyxl.utils import coordinate_to_tuple
 def last_legering_diameter_data():
     wb = xl.load_workbook("Produkt_miks.xlsx")
 
-    basis_sheet = wb.get_sheet_by_name("Legering-Diameter-Data")
+    basis_sheet = wb["Legering-Diameter-Data"]
 
     # Extract diameters and diameter percentages: 
     diameter_navn = []
@@ -20,8 +20,23 @@ def last_legering_diameter_data():
     for row in basis_sheet.iter_rows(min_row=2, max_row=5, min_col=3, max_col=4):
         legerings_navn.append(row[0].value)
         legeringer.append(row[1].value)
+        
+    # Laste historiske snittverdier.
+        
+    historie_sheet = wb["Historie"]
+    rho_cells = historie_sheet['D17':'G21']
+    rho = []
+    
+    for row in rho_cells:
+        row_values = []
+        for cell in row:
+            row_values.append(cell.value)
+        rho.append(row_values)
+    
 
-    return {"diameter_andel_sum": diametere, "diameter_navn": diameter_navn, "legerings_andel_sum": legeringer, "legerings_navn": legerings_navn}
+    return {"diameter_andel_sum": diametere, "diameter_navn": diameter_navn,
+            "legerings_andel_sum": legeringer, "legerings_navn": legerings_navn,
+            "historisk_snitt": rho}
 
 
 def skriv_løsning_til_fil(m: pyo.Model, sheet_name: str, upper_left_corner_cell: str, filename="Produkt_miks.xlsx"):

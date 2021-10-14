@@ -23,7 +23,7 @@ def test_pyomo():
     model.display()
 
 
-def bygg_basismodell(data: Dict[str, list]) -> pyo.Model:
+def bygg_basismodell(data: Dict[str, list], null_obj=True) -> pyo.Model:
     modell = pyo.ConcreteModel("BasisModell")
 
     diameter_summer = data["diameter_andel_sum"]; legerings_summer = data["legerings_andel_sum"]
@@ -47,8 +47,9 @@ def bygg_basismodell(data: Dict[str, list]) -> pyo.Model:
         return sum(m.X[i, legering_j] for i in m.Diametere) == legerings_summer[legering_j]
     modell.legeringsbegrensing = pyo.Constraint(modell.Legeringer, rule=legerings_betingelse)
 
-    # Legg til triviellt objektiv: min 0
-    modell.null_objektiv = pyo.Objective(expr = 0.0)
+    if null_obj:    
+        # Legg til triviellt objektiv: min 0
+        modell.null_objektiv = pyo.Objective(expr = 0.0)
     
     
     return modell
@@ -92,6 +93,7 @@ def løsningsvariabler_til_matrise(m: pyo.Model):
 def problem_1(skriv_til_fil=False, vis_modell=False):
     data = last_legering_diameter_data()
     basis_modell = bygg_basismodell(data)
+    
 
     if vis_modell:
         løs_og_vis_frem_modell(basis_modell)
@@ -165,11 +167,59 @@ def problem_3(skriv_til_fil=False, print_resultat=True):
         skriv_løsning_til_fil(sigma_modell, "Ulovlig produkt", "D24")
 
 
-def main():
-    # problem_1()
-    # problem_2()
-    problem_3(skriv_til_fil=True)
+
+def problem_4(skriv_til_fil=False, print_resultat=True):
     
+    # Laste data og lage basismodell.
+    data = last_legering_diameter_data()
+    historie_modell = bygg_basismodell(data, null_obj=False)
+    rho = data["historisk_snitt"]
+
+    # Definere U, V.
+    historie_modell.U = pyo.Var(historie_modell.Diametere, historie_modell.Legeringer, domain=pyo.NonNegativeReals)
+    historie_modell.V = pyo.Var(historie_modell.Diametere, historie_modell.Legeringer, domain=pyo.NonNegativeReals)
+    
+    def regel_1(m: pyo.Model, i, j):
+        return m.X[i, j] - rho[i][j] == m.U[i, j] - m.V[i, j]
+    
+        
+    # Lage liste med alle indekser. 
+    historie_modell.alle_indekser = [ item for item in itertools.product(historie_modell.Diametere, historie_modell.Legeringer) ]
+    
+    # Legge til begrensninger. 
+    historie_modell.begrensning_1 = pyo.Constraint(historie_modell.alle_indekser, rule=regel_1)
+    
+    
+    # Legg til objektiv.
+    historie_modell.objektiv = pyo.Objective(expr = sum(historie_modell.U[i, j] + historie_modell.V[i, j] 
+                                                    for i in historie_modell.Diametere for j in historie_modell.Legeringer),
+                                                    sense=pyo.minimize)
+    
+    
+    # Løs problemet.
+    løs_modell(historie_modell)
+
+    if print_resultat:
+        obj_verdi = 0
+        print("Indeks     X      rho      U      V")
+        for i in historie_modell.alle_indekser:
+            print(f"{i}:   {historie_modell.X[i].value:.2f}    {rho[i[0]][i[1]]:.2f}     {historie_modell.U[i].value:.2f}    {historie_modell.V[i].value:.2f}")
+            obj_verdi += historie_modell.U[i].value + historie_modell.V[i].value
+        
+        print(f"\nLøsningsvariabler:\n{løsningsvariabler_til_matrise(historie_modell)}\n")
+
+        print(f"Objektivfunksjon verdi: \n {obj_verdi}")
+    
+    
+    if skriv_til_fil:
+        skriv_løsning_til_fil(historie_modell, "Historie", "D6")
+    
+
+def main():
+    #problem_1()
+    #problem_2()
+    #problem_3(skriv_til_fil=False)
+    #problem_4(skriv_til_fil=False)
     pass
 
 if __name__ == "__main__":
