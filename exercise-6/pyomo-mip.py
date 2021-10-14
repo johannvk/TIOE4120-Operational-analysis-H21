@@ -117,22 +117,6 @@ def problem_2(skriv_til_fil=False):
         skriv_løsning_til_fil(ulovlig_produkt_modell, "Ulovlig produkt", "D5")
 
 
-def problem_d(omega: float=0.05, inkluder_ulovlige_kombinasjoner=True):
-    data = last_legering_diameter_data()
-    # Usikker om vi skal inkludere at noen kombinasjoner ikke er loblige fortsatt. Tror det.
-    
-    if inkluder_ulovlige_kombinasjoner:
-        terskel_verdi_modell = bygg_ulovlige_kombinasjoner_modell(data)
-    else:
-        terskel_verdi_modell = bygg_basismodell(data)
-    
-    # Legge til binærvariabler samt betingelser for tvinge avgjørelsesvariabler X_ij 
-    # til å enten oppfylle "X_ij == 0" eller "X_ij >= omega". 
-    M = 1.0  # Stor nok til å ikke påvirke valg av X_ij.
-    
-    pass
-
-
 def problem_3(skriv_til_fil=False, print_resultat=True):
     # Laste data og lage basismodell.
     data = last_legering_diameter_data()
