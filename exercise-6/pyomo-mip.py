@@ -160,13 +160,15 @@ def problem_3(skriv_til_fil=False, print_resultat=True):
             print(f"{i}:   {sigma_modell.Y[i].value}    {sigma_modell.X[i].value}")
         
         print(f"\nLøsningsvariabler:\n{løsningsvariabler_til_matrise(sigma_modell)}\n")
-        
+    
+    if skriv_til_fil:
+        skriv_løsning_til_fil(sigma_modell, "Ulovlig produkt", "D24")
 
 
 def main():
     # problem_1()
     # problem_2()
-    problem_3()
+    problem_3(skriv_til_fil=True)
     
     pass
 
