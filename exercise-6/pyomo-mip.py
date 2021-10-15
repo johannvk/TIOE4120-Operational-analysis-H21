@@ -97,15 +97,17 @@ def problem_1(skriv_til_fil=False, vis_modell=False):
 
     if vis_modell:
         løs_og_vis_frem_modell(basis_modell)
+
+        X_matrix = løsningsvariabler_til_matrise(basis_modell)
+        print(f"Basismodell løsnings-matrise:\n{X_matrix}\n")
+
     else:
         løs_modell(basis_modell)
 
-    X_matrix = løsningsvariabler_til_matrise(basis_modell)
-
-    print(f"Basismodell løsnings-matrise:\n{X_matrix}\n")
-
     if skriv_til_fil:
         skriv_løsning_til_fil(basis_modell, "Basismodell", "D5")
+
+    return basis_modell
 
 
 def problem_2(skriv_til_fil=False):
@@ -176,8 +178,8 @@ def problem_4(skriv_til_fil=False, print_resultat=True):
     rho = data["historisk_snitt"]
 
     # Definere U, V.
-    historie_modell.U = pyo.Var(historie_modell.Diametere, historie_modell.Legeringer, domain=pyo.NonNegativeReals)
-    historie_modell.V = pyo.Var(historie_modell.Diametere, historie_modell.Legeringer, domain=pyo.NonNegativeReals)
+    historie_modell.U = pyo.Var(historie_modell.Diametere, historie_modell.Legeringer, domain=pyo.NonNegativeReals, initialize=0.0)
+    historie_modell.V = pyo.Var(historie_modell.Diametere, historie_modell.Legeringer, domain=pyo.NonNegativeReals, initialize=0.0)
     
     def regel_1(m: pyo.Model, i, j):
         return m.X[i, j] - rho[i][j] == m.U[i, j] - m.V[i, j]
@@ -213,13 +215,39 @@ def problem_4(skriv_til_fil=False, print_resultat=True):
     
     if skriv_til_fil:
         skriv_løsning_til_fil(historie_modell, "Historie", "D6")
+
+    return historie_modell
     
 
+def problem_5():
+    # Find the objective-function value for the product matrix which simply fulfills 
+    # the requirements, without optimizing for minimum deviation from historical data.
+    data = last_legering_diameter_data()
+    rho = data["historisk_snitt"]
+    
+    første_modell = problem_1()
+
+    første_modell_avvik = 0.0
+    for (i, j) in itertools.product(første_modell.Diametere, første_modell.Legeringer):
+        første_modell_avvik += abs(første_modell.X[i, j].value - rho[i][j])
+
+    historisk_modell = problem_4(False, False)
+
+    historisk_modell_avvik = historisk_modell.objektiv.expr()
+
+    relativ_forbedring = (første_modell_avvik - historisk_modell_avvik)/første_modell_avvik
+
+    print(f"\nAvviket for den første modellen fra deloppgave a) ble: {første_modell_avvik:.4f},\n" \
+          f"mens avviket for modellen som vi optimaliserte for å minimere avviket ble: {historisk_modell_avvik:.4f}.\n")
+    print(f"Alstå oppnådde vi en relativ forbedring på: {100*relativ_forbedring:.2f}%.")
+
+
 def main():
-    #problem_1()
-    #problem_2()
-    #problem_3(skriv_til_fil=False)
-    #problem_4(skriv_til_fil=False)
+    problem_1()
+    problem_2()
+    problem_3(skriv_til_fil=False)
+    problem_4(skriv_til_fil=False)
+    problem_5()
     pass
 
 if __name__ == "__main__":
